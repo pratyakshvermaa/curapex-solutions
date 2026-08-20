@@ -1,0 +1,13 @@
+.scrape/
+.env
+.env*.local
+.env.local
+node_modules/
+.next/
+out/
+.DS_Store
+*.log
+.vercel
+tsconfig.tsbuildinfo
+
+.pydeps/

@@ -1,0 +1,24 @@
+---
+description: Next.js dev server and .next cache hygiene for this project
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Next.js dev cache rules
+
+When changing UI/CSS/components or running builds in this repo:
+
+1. **Never run `npm run build` or `rm -rf .next` while `next dev` is still running** — it corrupts webpack chunks and causes errors like `Cannot find module './682.js'` or missing `.pack.gz` files.
+
+2. **After substantive edits**, if the user reports stale UI or module errors, restart cleanly:
+   ```bash
+   npm run dev:clean
+   ```
+   This kills processes on ports 3000/3001, deletes `.next`, and starts dev on port 3000.
+
+3. **Before verifying changes in the browser**, prefer `dev:clean` over leaving a days-old dev server running.
+
+4. **Use port 3000 only** — do not leave a second server on 3001.
+
+5. **After `npm run build` for verification**, restart dev with `npm run dev:clean` if the user will continue developing.
