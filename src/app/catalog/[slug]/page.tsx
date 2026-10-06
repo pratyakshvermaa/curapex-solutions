@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import MedicineDetail from "@/components/MedicineDetail";
-import { getAllMedicines, getMedicineBySlug } from "@/lib/medicines";
+import { getAllMedicines, getMedicineBySlug, snippet } from "@/lib/medicines";
 
 type PageProps = {
   params: { slug: string };
@@ -17,7 +17,7 @@ export function generateMetadata({ params }: PageProps): Metadata {
   return {
     title: medicine.name,
     description:
-      medicine.description?.slice(0, 155) ||
+      snippet(medicine.description, 155) ||
       `${medicine.name} — enquire with Curapex Solutions for wholesale supply.`,
   };
 }

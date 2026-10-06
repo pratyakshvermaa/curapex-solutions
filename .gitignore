@@ -11,3 +11,5 @@ out/
 tsconfig.tsbuildinfo
 
 .pydeps/
+.env*
+!.env.example

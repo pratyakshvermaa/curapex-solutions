@@ -10,14 +10,13 @@ import { titleForRating } from "@/lib/reviews";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Basic HTML sanitization for user-submitted text */
-function sanitizeText(text: string): string {
-  return text
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;")
-    .slice(0, 1200); // Hard limit
+/**
+ * Strip control characters and cap length. No HTML-entity encoding here:
+ * React escapes text on render, so encoding would show "&#x27;" to readers.
+ */
+function sanitizeText(text: string, max = 200): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, "").slice(0, max);
 }
 
 export async function GET() {
@@ -30,7 +29,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const rating = Number(body.rating);
-    const text = sanitizeText(String(body.body || "").trim());
+    const rawText = String(body.body || "").trim();
+    const text = sanitizeText(rawText, 1200);
     const name = sanitizeText(String(body.name || "").trim());
     const location = sanitizeText(String(body.location || "").trim());
     const medicineName = sanitizeText(String(body.medicineName || "").trim());
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (text.length > 1200) {
+    if (rawText.length > 1200) {
       return NextResponse.json(
         { error: "Review is too long (max 1200 characters)." },
         { status: 400 }

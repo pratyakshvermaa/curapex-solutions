@@ -8,7 +8,7 @@ import {
 } from "@/lib/categoryStyle";
 import { getPrimaryInsightForCategory } from "@/lib/insights";
 import { formatUsd, inrToUsd, parseUnitPrice } from "@/lib/price";
-import { presentFields } from "@/lib/medicines";
+import { descriptionParagraphs, presentFields } from "@/lib/medicines";
 import EnquireButton from "./EnquireButton";
 import ProductGallery from "./ProductGallery";
 import SpecsPanel from "./SpecsPanel";
@@ -25,6 +25,7 @@ export default function MedicineDetail({ medicine }: { medicine: Medicine }) {
     medicine.parentCategory || medicine.category
   );
 
+  const paragraphs = descriptionParagraphs(medicine.description);
   const fields = presentFields(medicine).filter(
     (row) => row.label.toLowerCase() !== "price"
   );
@@ -99,9 +100,9 @@ export default function MedicineDetail({ medicine }: { medicine: Medicine }) {
             {medicine.name}
           </h1>
 
-          {medicine.description && (
+          {paragraphs.length > 0 && (
             <div className="mt-2.5 space-y-1.5 text-[0.8125rem] leading-relaxed text-ink-soft/75 md:text-sm">
-              {medicine.description.split(/\n+/).map((para, i) => (
+              {paragraphs.map((para, i) => (
                 <p key={i}>{para}</p>
               ))}
             </div>

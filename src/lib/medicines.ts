@@ -26,17 +26,9 @@ const MedicineSchema = z.object({
 
 const MedicinesArraySchema = z.array(MedicineSchema);
 
-// Validate at module load time with helpful error
-let validatedMedicines: Medicine[];
-try {
-  validatedMedicines = MedicinesArraySchema.parse(medicinesData) as Medicine[];
-} catch (err) {
-  console.error("medicines.json validation failed:", err);
-  // Fallback to empty array rather than crashing the build
-  validatedMedicines = [];
-}
-
-const medicines = validatedMedicines;
+// Validate at module load time — a bad data edit should fail the build,
+// not silently ship an empty catalog.
+const medicines = MedicinesArraySchema.parse(medicinesData) as Medicine[];
 
 export function getAllMedicines(): Medicine[] {
   return medicines;
@@ -145,6 +137,18 @@ export function snippet(text?: string | null, max = 110): string {
     .trim();
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max).trimEnd()}…`;
+}
+
+/** Scraped descriptions may contain HTML (<p>, <br>, <li>, tables) — split into plain paragraphs. */
+export function descriptionParagraphs(text?: string | null): string[] {
+  if (!text) return [];
+  return text
+    .replace(/<br\s*\/?>|<\/(p|li|tr|ul|table)>/gi, "\n")
+    .replace(/<\/td>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .split(/\n+/)
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
 }
 
 export function presentFields(
