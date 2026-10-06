@@ -1,54 +1,86 @@
 import fs from "fs";
 import path from "path";
+import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
+import { unstable_cache } from "next/cache";
 import {
   computeReviewStats,
   titleForRating,
   type Review,
 } from "./reviews";
+import seedReviews from "../../data/reviews.json";
+
+/** Cache tag — call revalidateTag(REVIEWS_TAG) after a write. */
+export const REVIEWS_TAG = "reviews";
 
 const FILE = path.join(process.cwd(), "data", "reviews.json");
+const BLOB_PATH = "reviews/reviews.json";
 
-export function readReviews(): Review[] {
+/**
+ * Vercel's filesystem is read-only, so production stores reviews in a private
+ * Vercel Blob. Locally (no Blob credentials) we keep using data/reviews.json.
+ * The first Blob read is seeded from data/reviews.json.
+ */
+function blobEnabled() {
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN)
+  );
+}
+
+function asReviews(parsed: unknown): Review[] {
+  return Array.isArray(parsed) ? (parsed as Review[]) : [];
+}
+
+async function readBlob(): Promise<{ reviews: Review[]; etag: string | null }> {
+  const res = await get(BLOB_PATH, { access: "private", useCache: false });
+  if (!res || res.statusCode !== 200) {
+    return { reviews: asReviews(seedReviews), etag: null };
+  }
+  const text = await new Response(res.stream).text();
+  return { reviews: asReviews(JSON.parse(text)), etag: res.blob.etag };
+}
+
+function readFile(): Review[] {
   try {
-    const raw = fs.readFileSync(FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as Review[];
+    return asReviews(JSON.parse(fs.readFileSync(FILE, "utf8")));
   } catch {
     // File missing, unreadable, or corrupt JSON — return empty list
     return [];
   }
 }
 
-export function writeReviews(reviews: Review[]) {
+const readBlobCached = unstable_cache(
+  async () => (await readBlob()).reviews,
+  ["reviews"],
+  { tags: [REVIEWS_TAG], revalidate: 3600 }
+);
+
+export async function readReviews(): Promise<Review[]> {
+  // The local file can change under us in dev, so only cache the Blob path.
+  if (!blobEnabled()) return readFile();
   try {
-    const dir = path.dirname(FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(FILE, JSON.stringify(reviews, null, 2) + "\n", "utf8");
+    return await readBlobCached();
   } catch (err) {
-    // Read-only filesystem (e.g. Vercel) — surface failure to the API caller
-    console.warn("reviews-store: could not write reviews.json", err);
-    throw err;
+    // Outside the cache so a transient failure isn't remembered.
+    console.error("reviews-store: blob read failed, using seed data", err);
+    return asReviews(seedReviews);
   }
 }
 
-export function getAllReviews(): Review[] {
-  return readReviews().sort((a, b) => (a.date < b.date ? 1 : -1));
+export async function getAllReviews(): Promise<Review[]> {
+  return (await readReviews()).sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-export function getReviewStats() {
-  return computeReviewStats(readReviews());
+export async function getReviewStats() {
+  return computeReviewStats(await readReviews());
 }
 
-export function addReview(
+export async function addReview(
   input: Omit<Review, "id" | "title" | "date" | "verified"> & {
     title?: string;
     verified?: boolean;
   }
-): Review {
-  const reviews = readReviews();
+): Promise<{ review: Review; reviews: Review[] }> {
   const review: Review = {
     id: `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     name: input.name.trim(),
@@ -61,7 +93,31 @@ export function addReview(
     medicineName: input.medicineName || null,
     medicineSlug: input.medicineSlug || null,
   };
-  reviews.unshift(review);
-  writeReviews(reviews);
-  return review;
+
+  if (!blobEnabled()) {
+    const reviews = [review, ...readFile()];
+    fs.writeFileSync(FILE, JSON.stringify(reviews, null, 2) + "\n", "utf8");
+    return { review, reviews };
+  }
+
+  // Read-modify-write guarded by the ETag so concurrent submissions don't
+  // overwrite each other; retry a few times on conflict.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { reviews: current, etag } = await readBlob();
+    const reviews = [review, ...current];
+    try {
+      await put(BLOB_PATH, JSON.stringify(reviews), {
+        access: "private",
+        contentType: "application/json",
+        addRandomSuffix: false,
+        allowOverwrite: etag !== null,
+        ...(etag ? { ifMatch: etag } : {}),
+      });
+      return { review, reviews };
+    } catch (err) {
+      if (err instanceof BlobPreconditionFailedError && attempt < 3) continue;
+      throw err;
+    }
+  }
+  throw new Error("reviews-store: could not save review after retries");
 }

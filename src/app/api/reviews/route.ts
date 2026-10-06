@@ -1,11 +1,11 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   addReview,
   getAllReviews,
-  getReviewStats,
+  REVIEWS_TAG,
 } from "@/lib/reviews-store";
-import { titleForRating } from "@/lib/reviews";
+import { computeReviewStats, titleForRating } from "@/lib/reviews";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +20,8 @@ function sanitizeText(text: string, max = 200): string {
 }
 
 export async function GET() {
-  const reviews = getAllReviews();
-  const stats = getReviewStats();
+  const reviews = await getAllReviews();
+  const stats = computeReviewStats(reviews);
   return NextResponse.json({ reviews, stats });
 }
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const review = addReview({
+    const { review, reviews } = await addReview({
       name,
       location,
       rating: Math.round(rating),
@@ -78,16 +78,21 @@ export async function POST(request: Request) {
       verified: false,
     });
 
+    revalidateTag(REVIEWS_TAG);
     revalidatePath("/reviews");
     revalidatePath("/");
+    revalidatePath("/about");
 
-    return NextResponse.json({ ok: true, review, stats: getReviewStats() });
+    return NextResponse.json({
+      ok: true,
+      review,
+      stats: computeReviewStats(reviews),
+    });
   } catch (err) {
     console.error("POST /api/reviews", err);
     return NextResponse.json(
       {
-        error:
-          "Could not save the review. On some hosts the data folder is read-only — try again locally or use persistent storage.",
+        error: "Could not save your review right now. Please try again shortly.",
       },
       { status: 500 }
     );

@@ -8,11 +8,14 @@ import {
 import { getAllInsights } from "@/lib/insights";
 import { getReviewStats } from "@/lib/reviews-store";
 
-export default function HomePage() {
+// Review stats come from storage; refresh hourly in case a revalidation is missed.
+export const revalidate = 3600;
+
+export default async function HomePage() {
   const featured = getFeaturedMedicines(9);
   const categories = getParentCategoryCounts();
   const total = getAllMedicines().length;
-  const { average, count } = getReviewStats();
+  const { average, count } = await getReviewStats();
   const insightCount = getAllInsights().length;
 
   return (

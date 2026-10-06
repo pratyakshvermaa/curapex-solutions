@@ -26,6 +26,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |---|---|
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | WhatsApp number in international format, no `+` or spaces (used only when an enquiry is submitted) |
 | `NEXT_PUBLIC_TELEGRAM_USERNAME` | Telegram username without `@` (used only when an enquiry is submitted) |
+| `BLOB_READ_WRITE_TOKEN` | Set automatically on Vercel when the Blob store is connected. Reviews are saved to a private Vercel Blob in production; without it (local dev) they're saved to `data/reviews.json`, which also seeds the Blob on first use. |
 
 ## Scripts
 
@@ -40,7 +41,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **GitHub:** https://github.com/pratyakshvermaa/curapex-solutions  
 - **Vercel project:** `badboy2/curapex-solutions`
 
-No database is required for the catalog. Enquiries open WhatsApp / Telegram using env vars.
+No database is required for the catalog. Enquiries open WhatsApp / Telegram using env vars. Submitted reviews are stored in Vercel Blob.
 
 ## Making changes live (checklist)
 

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ReviewSection from "@/components/ReviewSection";
 import { getAllMedicines } from "@/lib/medicines";
-import { getAllReviews, getReviewStats } from "@/lib/reviews-store";
+import { getAllReviews } from "@/lib/reviews-store";
+import { computeReviewStats } from "@/lib/reviews";
 
 export const metadata: Metadata = {
   title: "Reviews",
@@ -20,8 +21,8 @@ type ReviewsPageProps = {
 
 export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
   const { page: pageParam } = await searchParams;
-  const reviews = getAllReviews();
-  const { average, count, distribution } = getReviewStats();
+  const reviews = await getAllReviews();
+  const { average, count, distribution } = computeReviewStats(reviews);
   const medicines = getAllMedicines()
     .map((m) => ({ slug: m.slug, name: m.name }))
     .sort((a, b) => a.name.localeCompare(b.name));

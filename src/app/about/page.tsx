@@ -85,8 +85,11 @@ const exportMarkets = [
   { name: "Belgium", code: "be" },
 ];
 
-export default function AboutPage() {
-  const { average, count } = getReviewStats();
+// Review stats come from storage; refresh hourly in case a revalidation is missed.
+export const revalidate = 3600;
+
+export default async function AboutPage() {
+  const { average, count } = await getReviewStats();
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
