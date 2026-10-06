@@ -37,7 +37,9 @@ async function readBlob(): Promise<{ reviews: Review[]; etag: string | null }> {
     return { reviews: asReviews(seedReviews), etag: null };
   }
   const text = await new Response(res.stream).text();
-  return { reviews: asReviews(JSON.parse(text)), etag: res.blob.etag };
+  // get() reports a weak ETag (W/"…") but put({ ifMatch }) needs the strong form.
+  const etag = res.blob.etag.replace(/^W\//, "");
+  return { reviews: asReviews(JSON.parse(text)), etag };
 }
 
 function readFile(): Review[] {
