@@ -27,6 +27,19 @@ export const metadata: Metadata = {
   description:
     "Curapex Solutions supplies pharmaceutical tablets, capsules, injections, and specialty medicines for wholesale and export enquiries.",
   metadataBase: new URL("https://curapex-solutions.vercel.app"),
+  // Link previews (WhatsApp, Facebook, etc.). The image comes from
+  // app/opengraph-image.jpg and twitter-image.jpg.
+  openGraph: {
+    type: "website",
+    siteName: "Curapex Solutions",
+    locale: "en_IN",
+    title: "Curapex Solutions — Wholesale & Export Pharmaceuticals",
+    description:
+      "Browse 399+ tablets, capsules and injections and send a wholesale enquiry on WhatsApp or Telegram.",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

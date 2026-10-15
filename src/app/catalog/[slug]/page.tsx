@@ -14,11 +14,30 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: PageProps): Metadata {
   const medicine = getMedicineBySlug(params.slug);
   if (!medicine) return { title: "Medicine not found" };
+  const description =
+    snippet(medicine.description, 155) ||
+    `${medicine.name} — enquire with Curapex Solutions for wholesale supply.`;
+  // Product links are shared with buyers on WhatsApp, so the preview names
+  // the product and its composition rather than repeating the description.
+  const previewDescription = [
+    medicine.composition && `Composition: ${snippet(medicine.composition, 80)}.`,
+    "Wholesale & export supply from Curapex Solutions — tap to enquire on WhatsApp.",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return {
     title: medicine.name,
-    description:
-      snippet(medicine.description, 155) ||
-      `${medicine.name} — enquire with Curapex Solutions for wholesale supply.`,
+    description,
+    openGraph: {
+      type: "website",
+      siteName: "Curapex Solutions",
+      locale: "en_IN",
+      url: `/catalog/${medicine.slug}`,
+      title: medicine.name,
+      description: previewDescription,
+      // Setting openGraph here replaces the inherited one, so restate the image.
+      images: [{ url: "/opengraph-image.jpg", width: 1200, height: 630 }],
+    },
   };
 }
 

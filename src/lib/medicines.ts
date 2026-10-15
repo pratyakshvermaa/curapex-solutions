@@ -2,7 +2,9 @@ import medicinesData from "../../data/medicines.json";
 import type { Medicine } from "@/types/medicine";
 import { z } from "zod";
 
-// Runtime validation schema for Medicine data
+// Runtime validation schema for Medicine data. Unknown keys (scrape metadata
+// such as listing IDs and source site) are stripped so they never reach the
+// browser payload.
 const MedicineSchema = z.object({
   slug: z.string().min(1),
   name: z.string().min(1),
@@ -18,9 +20,6 @@ const MedicineSchema = z.object({
   certifications: z.array(z.string()).optional(),
   brand: z.string().nullable().optional(),
   strength: z.string().nullable().optional(),
-  indiaMartId: z.string().optional(),
-  indiaMartCategory: z.string().nullable().optional(),
-  source: z.string().optional(),
   specs: z.record(z.string(), z.string()).optional(),
 });
 
