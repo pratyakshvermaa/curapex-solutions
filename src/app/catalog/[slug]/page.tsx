@@ -35,8 +35,7 @@ export function generateMetadata({ params }: PageProps): Metadata {
       url: `/catalog/${medicine.slug}`,
       title: medicine.name,
       description: previewDescription,
-      // Setting openGraph here replaces the inherited one, so restate the image.
-      images: [{ url: "/opengraph-image.jpg", width: 1200, height: 630 }],
+      // Image: ./opengraph-image.tsx (product photo card).
     },
   };
 }
